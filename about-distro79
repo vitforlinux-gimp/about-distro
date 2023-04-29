@@ -1,0 +1,364 @@
+#!/usr/bin/env bash
+
+
+# Sparky About uses a few tools to display some system informations
+# via a GUI frontend built by Yad
+#
+# Created by Paweł "pavroo" Pijanowski 2015/05/14
+# Last updated 2016/11/27
+# Copyright 2015, 2016 under the GNU GPL2 License
+
+LOCAL1="About "
+LOCAL2="Other"
+LOCAL3="OS Name"
+LOCAL4="OS Version"
+LOCAL5="OS Code Name"
+LOCAL6="Date and Time"
+LOCAL7="Time Zone"
+LOCAL8="Host"
+LOCAL9="Uptime"
+LOCAL10="Kernel"
+LOCAL11="RAM Used-Total"
+LOCAL12="SWAP Used-Total"
+LOCAL13="Window Manager"
+LOCAL14="Locale"
+LOCAL15="Foreign Architecture Enabled"
+LOCAL16="User"
+LOCAL17="User ID"
+LOCAL18="User Groups"
+LOCAL19="Sparky Web Site"
+LOCAL20="Community"
+LOCAL21="Support"
+LOCAL22="Bug Tracker"
+LOCAL23="Sponsoring"
+LOCAL24="Donate"
+LOCAL25="xdg-open not installed"
+LOCAL725="Disk Info"
+LOCAL726="CPU"
+LOCAL727="Packages"
+LOCAL728="Installation Day"
+LOCAL729="Last Update"
+
+exists()
+{
+  command -v "$1" >/dev/null 2>&1
+}
+
+function navihome
+{
+xdg-open `cat /etc/os-release | grep HOME | sed 's/.*\=//g;s/\"//g'`
+}
+export -f navihome
+
+function navisupp
+{
+xdg-open `cat /etc/os-release | grep SUPPORT | sed 's/.*\=//g;s/\"//g'`
+}
+export -f navisupp
+
+function navibug
+{
+xdg-open `cat /etc/os-release | grep BUG | sed 's/.*\=//g;s/\"//g'`
+}
+export -f navibug
+
+
+#https://distrowatch.com/table.php?distribution=
+
+# get default's locale file
+DEFLOCDIR="/usr/share/moke/moke-about"
+if [ "`cat /etc/default/locale | grep de`" != "" ]; then
+. $DEFLOCDIR/de
+elif [ "`cat /etc/default/locale | grep es`" != "" ]; then
+. $DEFLOCDIR/es
+elif [ "`cat /etc/default/locale | grep fr`" != "" ]; then
+. $DEFLOCDIR/fr
+elif [ "`cat /etc/default/locale | grep id_ID`" != "" ]; then
+. $DEFLOCDIR/id_ID
+elif [ "`cat /etc/default/locale | grep it`" != "" ]; then
+. $DEFLOCDIR/it
+elif [ "`cat /etc/default/locale | grep ja_JP`" != "" ]; then
+. $DEFLOCDIR/ja
+elif [ "`cat /etc/default/locale | grep pl`" != "" ]; then
+. $DEFLOCDIR/pl
+elif [ "`cat /etc/default/locale | grep pt_BR`" != "" ]; then
+. $DEFLOCDIR/pt_BR
+elif [ "`cat /etc/default/locale | grep pt_PT`" != "" ]; then
+. $DEFLOCDIR/pt_PT
+elif [ "`cat /etc/default/locale | grep ru`" != "" ]; then
+. $DEFLOCDIR/ru
+elif [ "`cat /etc/default/locale | grep sv_SE`" != "" ]; then
+. $DEFLOCDIR/se
+else
+. $DEFLOCDIR/en
+fi
+
+GUI=yad
+DIALOG="$GUI --window-icon=computer --buttons-layout=spread --width=790 --height=390 --center"
+DIALOG450="yad --window-icon=computer --width=750 --height=300 --center"
+TITLE="--always-print-result --dialog-sep --image=computer --title="
+TEXT="--text="
+#MSGBOX="--button=Ok:0"
+MSGBOX="--button=Ok:0"
+#DONATEBUTTON="--button=$LOCAL24:2"
+#SPONSORBUTTON="--button=$LOCAL23:3"
+WWWBUTTON="--button=Web:5"
+#FORUMBUTTON="--button=$LOCAL20:5"
+SHOTBUTTON='--button=ScreenShot: scrot About-distro-%Y-%m-%d_$wx$h.jpg -d 7'
+WIKIBUTTON="--button=$LOCAL21:6"
+BUGBUTTON="--button=Bugs:7"
+
+
+	if exists lsb_release; then
+	OSNAME="`lsb_release -d | awk '{print $2}'`"
+	else
+	OSNAME="`cat /etc/issue | awk '{print $1}'`"
+	fi
+
+function navidistro
+{
+xdg-open https://distrowatch.com/table.php?distribution=`cat /etc/issue | awk '{print $1}'`
+}
+export -f navidistro
+
+	if exists tazpkg; then
+	PKG=$(tazpkg | grep 'Installed pack'| sed 's/.*:*G//g')
+	PKGMAN="tazpkg"
+	INSTDATE=$(head -n1 /var/log/slitaz/tazpkg.log |  awk '{print $1,$2}')
+	UPDATE=$(tail -n1 /var/log/slitaz/tazpkg.log |  awk '{print $1,$2}')
+	elif exists dpkg; then
+	PKG=$(dpkg -l | grep -c '^i')
+	PKGMAN="dpkg"
+	INSTDATE=$(head -n1 /var/log/dpkg.log | awk '{print $1,$2}')
+	UPDATE=$(tail -n1 /var/log/dpkg.log | awk '{print $1,$2}')
+	FOREIGN=`dpkg --print-foreign-architectures | awk '{print $1}'`
+	elif exists rpm; then
+	PKG=$(rpm -qa | wc -l) 
+	PKGMAN="rpm"
+#	INSTDATE=$(head -n1 /var/log/eopkg.log | awk '{print $1}')
+#	UPDATE=$(tail -n1 /var/log/eopkg.log | awk '{print $1}')
+	elif exists pkg; then
+	PKG=$(pkg info | wc -l)
+	elif exists eopkg; then
+	PKG=$(eopkg li | wc -l)
+	INSTDATE=$(head -n1 /var/log/eopkg.log | awk '{print $1}')
+	UPDATE=$(tail -n1 /var/log/eopkg.log | awk '{print $1}')
+	elif exists pacman; then
+	PKG=$(pacman -Qq | wc -l)
+	PKGMAN="pacman"
+	INSTDATE=$(head -n1 /var/log/pacman.log | awk '{print $1,$2}')
+	UPDATE=$(tail -n1 /var/log/pacman.log | awk '{print $1,$2}')
+	fi
+
+        if exists timedatectl; then
+	PRINTTIMEZONE="`timedatectl | grep 'Time zone'| awk '{print $3 ,$4$5}'`"
+	else
+	PRINTTIMEZONE="`cat /etc/timezone`"
+	fi
+TITLETEXT="About $OSNAME"
+OSVERSION="`lsb_release -r | awk '{print $2}'`"
+OSCODE="`lsb_release -c | awk '{print $2}'`"
+INIT="`cat cat /proc/1/comm`"
+PRINTDATE="`date '+%a %F %T'`"
+#PRINTTIMEZONE="`cat /etc/timezone`"
+HOST="`uname -n`"
+UPTIME="`uptime -p`"
+KERNEL="`uname -sr`"
+CPU=$(awk 'BEGIN{FS=":"} /model name/ { print $2; exit }' /proc/cpuinfo | awk 'BEGIN{FS=" @"; OFS="\n"} { print $1; exit }')
+GPU=$(lspci | grep VGA | sed 's/.*: //g')
+DRI="`cat /var/log/Xorg.0.log | grep "DRI driver"| awk '{print $8}'`"
+#RAMUSED="`vmstat -s | grep used | awk 'NR==1{print $1/1024}'`"
+MODEL="`cat /sys/devices/virtual/dmi/id/product_name`"
+VENDOR="`cat /sys/devices/virtual/dmi/id/board_vendor`"
+BIOSVENDOR="`cat /sys/devices/virtual/dmi/id/bios_vendor`"
+BIOSVERSION="`cat /sys/devices/virtual/dmi/id/bios_version`"
+BIOSDATE="`cat /sys/devices/virtual/dmi/id/bios_date`"
+RAMTOTAL="`free -m | grep Mem | awk '{print $3" MB- "$2" MB"}'`"
+SWAPTOTAL="`free -m | grep Swap | awk '{print $3" MB- "$2" MB"}'`"
+PRINTLOCALE="`locale | grep 'LANG=' | cut -d= -f2`"
+USER="`whoami`"
+USERID="`id -u`"
+USERGROUPS="`groups`"
+DISKFREE="`df -h / /home`"
+FONT="font_weight='bold'"
+RESOLUTION="`xrandr | grep '*' | awk '{print $1}'`"
+if [ "$FOREIGN" = "" ]; then
+PRINTARCH="NO"
+else
+PRINTARCH="$FOREIGN"
+fi
+ARCH64="`uname -m | grep x86_64`"
+ARCH32="`uname -m | grep 686`"
+ARCHARM="`uname -m | grep arm`"
+if [ "$ARCH64" != "" ]; then
+MACHINEARCH="x86_64"
+elif [ "$ARCH32" != "" ]; then
+MACHINEARCH="i686"
+elif [ "$ARCHARM" != "" ]; then
+MACHINEARCH="ARM"
+else
+MACHINEARCH="$LOCAL2"
+fi
+
+		loc="/sys/devices/system/cpu/cpu0/cpufreq"
+		bl="${loc}/bios_limit"
+		smf="${loc}/scaling_max_freq"
+		if [ -f "$bl" ] && [ -r "$bl" ]; then
+			cpu_mhz=$(awk '{print $1/1000}' "$bl")
+		elif [ -f "$smf" ] && [ -r "$smf" ]; then
+			cpu_mhz=$(awk '{print $1/1000}' "$smf")
+		else
+			cpu_mhz=$(awk -F':' '/cpu MHz/{ print int($2+.5) }' /proc/cpuinfo | head -n 1)
+		fi
+
+## Get the window manager name
+	if exists pidof; then
+	PIDOF="pidof"
+	else
+	PIDOF="pgrep"
+	fi
+
+
+if [ $($PIDOF afterstep) ]; then
+WMNAME="Afterstep"
+elif [ $($PIDOF awesome) ]; then
+WMNAME="Awesome"
+elif [ $($PIDOF blackbox) ]; then
+WMNAME="Blackbox"
+elif [ $($PIDOF bspwm) ]; then
+WMNAME="Bspwm"
+elif [ $($PIDOF budgie-wm) ]; then
+WMNAME="BudgieWM"
+elif [ $($PIDOF catwm) ]; then
+WMNAME="Catwm"
+elif [ $($PIDOF cinnamon) ]; then
+WMNAME="Muffin"
+elif [ $($PIDOF compiz) ]; then
+WMNAME="Compiz"
+elif [ $($PIDOF deepin-wm) ]; then
+WMNAME="Deepin"
+elif [ $($PIDOF dwm) ]; then
+WMNAME="Dwm"
+elif [ $($PIDOF edewm) ]; then
+WMNAME="Edewm"
+elif [ $($PIDOF enlightenment) ]; then
+WMNAME="Enlightenment"
+elif [ $($PIDOF fluxbox) ]; then
+WMNAME="Fluxbox"
+elif [ $($PIDOF fvwm) ]; then
+WMNAME="FVWM"
+elif [ $($PIDOF gala) ]; then
+WMNAME="Gala"
+elif [ $($PIDOF i3) ]; then
+WMNAME="i3"
+elif [ $($PIDOF icewm) ]; then
+WMNAME="IceWM"
+elif [ $($PIDOF jwm) ]; then
+WMNAME="JWM"
+elif [ $($PIDOF kwin) ]; then
+WMNAME="KWin"
+elif [ $($PIDOF kwin_x11) ]; then
+WMNAME="KWin_x11"
+elif [ $($PIDOF manokwari) ]; then
+WMNAME="Manokwari"
+elif [ $($PIDOF marco) ]; then
+WMNAME="Marco"
+elif [ $($PIDOF metacity) ]; then
+WMNAME="Metacity"
+elif [ $($PIDOF gnome-shell) ]; then
+WMNAME="Gnome-Shell"
+elif [ $($PIDOF mutter) ]; then
+WMNAME="Mutter"
+elif [ $($PIDOF openbox) ]; then
+WMNAME="Openbox"
+elif [ $($PIDOF pekwm) ]; then
+WMNAME="Pekwm"
+elif [ $($PIDOF ratpoison) ]; then
+WMNAME="Ratpoison"
+elif [ $($PIDOF sawfish) ]; then
+WMNAME="Sawfish"
+elif [ $($PIDOF twin) ]; then
+WMNAME="Twin"
+elif [ $($PIDOF twm) ]; then
+WMNAME="Twm"
+elif [ $($PIDOF wmaker) ]; then
+WMNAME="Window Maker"
+elif [ $($PIDOF xfwm4) ]; then
+WMNAME="Xfwm4"
+else
+WMNAME="$LOCAL2"
+fi
+
+				if [[ -f $HOME/.gtkrc-2.0 ]]; then
+					gtk2Theme=$(grep '^gtk-theme-name' "$HOME"/.gtkrc-2.0 | awk -F'=' '{print $2}')
+					gtk2Theme=${gtk2Theme//\"/}
+					gtkIcons=$(grep '^gtk-icon-theme-name' "$HOME"/.gtkrc-2.0 | awk -F'=' '{print $2}')
+					gtkIcons=${gtkIcons//\"/}
+					gtkFont=$(grep 'font_name' "$HOME"/.gtkrc-2.0 | awk -F'=' '{print $2}')
+					gtkFont=${gtkFont//\"/}
+				fi
+
+				if [[ -f $HOME/.config/gtk-3.0/settings.ini ]]; then
+					gtk3Theme=$(grep '^gtk-theme-name=' "$HOME"/.config/gtk-3.0/settings.ini | awk -F'=' '{print $2}')
+				fi
+
+## build the window
+DIS="\n<span $FONT>$LOCAL3: </span>$OSNAME\t\
+<span $FONT>$LOCAL4: </span>$OSVERSION\t\
+<span $FONT>$LOCAL5: </span>$OSCODE\n\
+<span $FONT>$LOCAL10: </span>$KERNEL\t\
+<span $FONT>Arch: </span>$MACHINEARCH\t\
+<span $FONT>Init: </span>$INIT\n\n\
+<span $FONT>$LOCAL6: </span>$PRINTDATE\t\
+<span $FONT>$LOCAL7: </span>$PRINTTIMEZONE\t\
+<span $FONT>$LOCAL14: </span>$PRINTLOCALE\n\n\
+<span $FONT>Motherboard: </span>$VENDOR $MODEL\t\
+<span $FONT>BIOS: </span>$BIOSVENDOR $BIOSVERSION $BIOSDATE\n\
+<span $FONT>$LOCAL726: </span>$CPU $cpu_mhz GHz\n\
+<span $FONT>GPU HW: </span>$GPU\n\
+<span $FONT>GPU Driver: </span>$DRI\t\
+<span $FONT>Resolution: </span>$RESOLUTION\n\n\
+<span $FONT>$LOCAL727: </span>$PKG ($PKGMAN)\t\
+<span $FONT>$LOCAL728: </span>$INSTDATE\t\
+<span $FONT>$LOCAL729: </span>$UPDATE\n\
+<span $FONT>$LOCAL8: </span>$HOST\n\
+<span $FONT>$LOCAL9: </span>$UPTIME\n\
+<span $FONT>$LOCAL11: </span>$RAMTOTAL\t\
+<span $FONT>$LOCAL12: </span>$SWAPTOTAL\n\
+<span $FONT>$LOCAL13: </span>$WMNAME $XDG_CURRENT_DESKTOP $DESKTOP_SESSION\n\
+<span $FONT>Gtk 2 Theme: </span>$gtk2Theme\t\
+<span $FONT>Gtk 3 Theme: </span>$gtk3Theme\t\
+<span $FONT>Gtk Icons: </span>$gtkIcons\n\
+<span $FONT>$LOCAL15: </span>$PRINTARCH\n\n\
+<span $FONT>$LOCAL16: </span>$USER\t\
+<span $FONT>$LOCAL17: </span>$USERID\t\
+<span $FONT>$LOCAL18: </span>$USERGROUPS\n\
+<span $FONT>$LOCAL725:\n </span>$DISKFREE"
+
+echo -e  $DIS | sed 's/<[^>]*>//g' 
+
+yad --window-icon=computer --buttons-layout=spread --width=790 --height=390 --center $TITLE"$TITLETEXT"\
+  --button="Home: bash -c navihome" \
+  --button="Support: bash -c navisupp" \
+  --button="Bug: bash -c navibug" \
+  --button="DistroWatch: bash -c navidistro" \
+  --button="ScreenShot: scrot About-$OSNAME-%Y-%m-%d_%H-%M-%S.jpg -d 7" \
+  --button=Ok:0 \
+  --text="$DIS"
+
+
+ret=$?
+
+# check is xdg-open installed
+#if [ ! -f /etc/alternatives/xdg-open ]; then
+#	$DIALOG450 $TITLE"$TITLETEXT" $TEXT"$LOCAL25" $MSGBOX
+#	exit 0
+#fi
+#x-www-browser
+
+# gnome-screenshot -f /home/vit/Scrivania/photo.jpg
+# $XDG_CURRENT_DESKTOP
+# $DESKTOP_SESSION
+# cat /sys/devices/virtual/dmi/id/product_name
+
+exit 0
